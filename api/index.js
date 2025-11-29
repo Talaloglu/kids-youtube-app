@@ -185,8 +185,6 @@ app.get('/', (req, res) => {
     });
 });
 
-});
-
 // Export for Vercel serverless
 module.exports = app;
 
