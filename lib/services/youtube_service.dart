@@ -5,8 +5,8 @@ import 'mock_data.dart';
 
 class YouTubeService {
   // Backend API URL - using our Node.js proxy server for unlimited requests
-  // Using localhost for now - deploy backend separately when ready
-  static const String _backendUrl = 'http://localhost:3002';
+  // Production backend deployed on Render
+  static const String _backendUrl = 'https://kids-youtube-app.onrender.com';
 
   // Search for videos using backend proxy (unlimited, no API key needed!)
   Future<Map<String, dynamic>> searchVideos(
@@ -54,16 +54,16 @@ class YouTubeService {
     String category, {
     String? pageToken,
   }) async {
-    // Map category IDs to kid-friendly search terms
+    // Map category IDs to kid-friendly search terms with Arabic cartoon priority
     final categoryQueries = {
-      'educational': 'educational kids science math',
-      'stories': 'kids stories fairy tales',
-      'arts': 'kids arts crafts drawing',
-      'music': 'kids songs nursery rhymes',
-      'animals': 'animals for kids wildlife',
-      'games': 'kids games puzzles brain teasers',
-      'cartoons': 'kids cartoons educational',
-      'sports': 'kids sports exercise yoga',
+      'educational': 'تعليمي للأطفال educational cartoon',
+      'stories': 'قصص أطفال حكايات stories cartoon',
+      'arts': 'رسم تلوين للأطفال arts crafts cartoon',
+      'music': 'أغاني أطفال songs nursery rhymes cartoon',
+      'animals': 'حيوانات للأطفال animals cartoon',
+      'games': 'ألعاب أطفال games puzzles cartoon',
+      'cartoons': 'رسوم متحركة للأطفال كرتون cartoons',
+      'sports': 'رياضة أطفال sports exercise cartoon',
     };
 
     final query = categoryQueries[category] ?? 'kids educational';

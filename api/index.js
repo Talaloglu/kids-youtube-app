@@ -64,9 +64,10 @@ app.get('/api/search', async (req, res) => {
         // For page 1, do a fresh search
         if (pageNum === 1) {
             console.time('YouTube Search');
-            // Add "kids" to search query for kid-friendly content
-            // Fetch fewer items initially to speed up response
-            searchResults = await youtubeSearch.GetListByKeyword(q + ' kids', false, 25);
+            // Prioritize Arabic cartoon content for kids safety
+            // Add "رسوم متحركة" (Arabic for cartoons) and "cartoon" for safe content
+            const searchQuery = q + ' رسوم متحركة للأطفال cartoon kids';
+            searchResults = await youtubeSearch.GetListByKeyword(searchQuery, false, 25);
             console.timeEnd('YouTube Search');
 
             // Cache the continuation token for next page
@@ -91,13 +92,17 @@ app.get('/api/search', async (req, res) => {
             }
         }
 
-        // Kid-friendly keywords for relevance filtering
+        // Kid-friendly keywords for relevance filtering (Arabic + English)
         const kidsKeywords = [
+            // English keywords
             'kids', 'children', 'educational', 'learning', 'fun', 'cartoon',
             'animation', 'story', 'tales', 'nursery', 'rhyme', 'song',
             'craft', 'art', 'draw', 'animal', 'nature', 'science',
             'math', 'abc', 'numbers', 'colors', 'shapes', 'family',
-            'friendly', 'toddler', 'preschool', 'kindergarten'
+            'friendly', 'toddler', 'preschool', 'kindergarten',
+            // Arabic keywords for safety
+            'أطفال', 'للأطفال', 'رسوم', 'متحركة', 'كرتون', 'تعليمي',
+            'قصص', 'أغاني', 'حكايات', 'تلوين', 'حيوانات'
         ];
 
         // Filter and format videos
