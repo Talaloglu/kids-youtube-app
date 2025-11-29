@@ -166,6 +166,100 @@ app.get('/api/search', async (req, res) => {
     }
 });
 
+// Get videos from a specific channel
+app.get('/api/channel/:channelName', async (req, res) => {
+    try {
+        const { channelName } = req.params;
+        const { page = 1 } = req.query;
+
+        if (!channelName) {
+            return res.status(400).json({ error: 'Channel name is required' });
+        }
+
+        console.log(`[Kids API] Fetching videos from channel: ${channelName}, page: ${page}`);
+
+        const pageNum = parseInt(page);
+        let searchResults;
+
+        // Search for videos from this channel with Arabic cartoon priority
+        const searchQuery = `${channelName} رسوم متحركة للأطفال cartoon kids`;
+
+        if (pageNum === 1) {
+            searchResults = await youtubeSearch.GetListByKeyword(searchQuery, false, 25);
+
+            // Cache continuation token
+            if (searchResults.nextPage) {
+                const cacheKey = `${channelName}_channel_continuation`;
+                searchCache.set(cacheKey, searchResults.nextPage);
+            }
+        } else {
+            const cacheKey = `${channelName}_channel_continuation`;
+            const continuation = searchCache.get(cacheKey);
+
+            if (continuation) {
+                searchResults = await youtubeSearch.NextPage(continuation, false, 50);
+                if (searchResults.nextPage) {
+                    searchCache.set(cacheKey, searchResults.nextPage);
+                }
+            } else {
+                return res.json({ videos: [], nextPageToken: undefined });
+            }
+        }
+
+        // Filter videos from the same channel
+        const channelVideos = (searchResults.items || [])
+            .filter(item => {
+                if (item.type !== 'video') return false;
+
+                const itemChannel = (item.channelTitle || '').toLowerCase();
+                const targetChannel = channelName.toLowerCase();
+
+                // Check if channel name matches
+                return itemChannel.includes(targetChannel) || targetChannel.includes(itemChannel);
+            })
+            .map(video => {
+                const durationSeconds = parseDuration(
+                    video.length?.simpleText ||
+                    video.lengthText ||
+                    video.duration ||
+                    ''
+                );
+
+                // Filter by duration (2-20 minutes)
+                if (durationSeconds < 120 || durationSeconds > 1200) return null;
+
+                return {
+                    id: video.id,
+                    title: video.title,
+                    thumbnailUrl: video.thumbnail?.thumbnails?.[0]?.url || `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`,
+                    channelTitle: video.channelTitle || 'Unknown',
+                    publishedAt: video.publishedTime || 'Recently',
+                    description: video.description || '',
+                    category: 'general',
+                    videoUrl: `https://www.youtube.com/watch?v=${video.id}`,
+                    duration: formatDuration(durationSeconds)
+                };
+            })
+            .filter(v => v !== null);
+
+        console.log(`[Kids API] Found ${channelVideos.length} videos from channel: ${channelName}`);
+
+        const nextPageToken = searchResults.nextPage ? (pageNum + 1).toString() : undefined;
+
+        res.json({
+            videos: channelVideos,
+            nextPageToken
+        });
+
+    } catch (error) {
+        console.error('[Kids API] Channel videos error:', error);
+        res.status(500).json({
+            error: 'Failed to fetch channel videos',
+            message: error.message
+        });
+    }
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });

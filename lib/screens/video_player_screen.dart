@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import 'dart:html' as html;
 import '../models/video_model.dart';
 import '../providers/bookmark_provider.dart';
+import '../services/youtube_service.dart';
+import '../widgets/video_card.dart';
 
 class VideoPlayerScreen extends StatefulWidget {
   final Video video;
@@ -16,6 +18,13 @@ class VideoPlayerScreen extends StatefulWidget {
 
 class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   late YoutubePlayerController _controller;
+  final YouTubeService _youtubeService = YouTubeService();
+  final ScrollController _scrollController = ScrollController();
+
+  List<Video> _relatedVideos = [];
+  String? _nextPageToken;
+  bool _isLoadingRelated = false;
+  bool _hasMoreRelated = true;
 
   @override
   void initState() {
@@ -44,11 +53,78 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         enableCaption: true,
       ),
     );
+
+    // Load related videos from same channel
+    _loadRelatedVideos();
+
+    // Setup infinite scroll
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      if (!_isLoadingRelated && _hasMoreRelated) {
+        _loadMoreRelatedVideos();
+      }
+    }
+  }
+
+  Future<void> _loadRelatedVideos() async {
+    setState(() {
+      _isLoadingRelated = true;
+    });
+
+    try {
+      final result = await _youtubeService.getChannelVideos(
+        widget.video.channelTitle,
+      );
+
+      setState(() {
+        _relatedVideos = result['videos'] as List<Video>;
+        _nextPageToken = result['nextPageToken'] as String?;
+        _hasMoreRelated = _nextPageToken != null;
+        _isLoadingRelated = false;
+      });
+    } catch (e) {
+      print('Error loading related videos: $e');
+      setState(() {
+        _isLoadingRelated = false;
+      });
+    }
+  }
+
+  Future<void> _loadMoreRelatedVideos() async {
+    if (_nextPageToken == null) return;
+
+    setState(() {
+      _isLoadingRelated = true;
+    });
+
+    try {
+      final result = await _youtubeService.getChannelVideos(
+        widget.video.channelTitle,
+        pageToken: _nextPageToken,
+      );
+
+      setState(() {
+        _relatedVideos.addAll(result['videos'] as List<Video>);
+        _nextPageToken = result['nextPageToken'] as String?;
+        _hasMoreRelated = _nextPageToken != null;
+        _isLoadingRelated = false;
+      });
+    } catch (e) {
+      print('Error loading more related videos: $e');
+      setState(() {
+        _isLoadingRelated = false;
+      });
+    }
   }
 
   @override
   void dispose() {
     _controller.close();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -81,6 +157,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         ],
       ),
       body: SingleChildScrollView(
+        controller: _scrollController,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -144,6 +221,76 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 ],
               ),
             ),
+
+            // Related Videos Section
+            const Divider(thickness: 8),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.video_library,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'More from ${widget.video.channelTitle}',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ],
+              ),
+            ),
+
+            // Related Videos Grid
+            if (_relatedVideos.isEmpty && _isLoadingRelated)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (_relatedVideos.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(32),
+                child: Center(
+                  child: Text(
+                    'No more videos from this channel',
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.75,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                  ),
+                  itemCount: _relatedVideos.length + (_hasMoreRelated ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index == _relatedVideos.length) {
+                      // Loading indicator at the end
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
+                    }
+
+                    final video = _relatedVideos[index];
+                    return VideoCard(video: video);
+                  },
+                ),
+              ),
+
+            // Bottom padding
+            const SizedBox(height: 32),
           ],
         ),
       ),

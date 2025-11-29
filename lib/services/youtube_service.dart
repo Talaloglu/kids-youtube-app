@@ -70,6 +70,45 @@ class YouTubeService {
     return searchVideos(query, pageToken: pageToken);
   }
 
+  // Get videos from a specific channel
+  Future<Map<String, dynamic>> getChannelVideos(
+    String channelName, {
+    String? pageToken,
+  }) async {
+    try {
+      final page = pageToken ?? '1';
+      final url = Uri.parse(
+        '$_backendUrl/api/channel/$channelName',
+      ).replace(queryParameters: {'page': page});
+
+      print('Fetching channel videos: $url');
+
+      final response = await http
+          .get(url)
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout: () {
+              throw Exception('Request timeout');
+            },
+          );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final videos = _parseVideosFromBackend(data['videos'] as List<dynamic>);
+
+        print('Fetched ${videos.length} videos from channel: $channelName');
+
+        return {'videos': videos, 'nextPageToken': data['nextPageToken']};
+      } else {
+        print('Channel API Error: ${response.statusCode}');
+        return {'videos': <Video>[], 'nextPageToken': null};
+      }
+    } catch (e) {
+      print('Error fetching channel videos: $e');
+      return {'videos': <Video>[], 'nextPageToken': null};
+    }
+  }
+
   // Parse videos from backend response
   List<Video> _parseVideosFromBackend(List<dynamic> videosData) {
     final List<Video> videos = [];
