@@ -7,9 +7,6 @@ class YouTubeService {
   // Backend API URL - using our Node.js proxy server for unlimited requests
   // Production backend deployed on Render
   static const String _backendUrl = 'https://kids-youtube-app.onrender.com';
-  // Backend API URL - using local server for testing fixes
-  // Use 127.0.0.1:3002 with 'adb reverse tcp:3002 tcp:3002'
-  // static const String _backendUrl = 'http://127.0.0.1:3002';
 
   // Search for videos using backend proxy (unlimited, no API key needed!)
   Future<Map<String, dynamic>> searchVideos(
@@ -108,50 +105,6 @@ class YouTubeService {
       }
     } catch (e) {
       print('Error fetching channel videos: $e');
-      return {'videos': <Video>[], 'nextPageToken': null};
-    }
-  }
-
-  // Get related videos (similar content from OTHER channels)
-  Future<Map<String, dynamic>> getRelatedVideos(
-    String query, {
-    String? excludeChannel,
-    String? pageToken,
-  }) async {
-    try {
-      final page = pageToken ?? '1';
-      final uri = Uri.parse('$_backendUrl/api/related').replace(
-        queryParameters: {
-          'q': query,
-          'excludeChannel': excludeChannel ?? '',
-          'page': page,
-        },
-      );
-
-      print('Fetching related videos: $uri');
-
-      final response = await http
-          .get(uri)
-          .timeout(
-            const Duration(seconds: 30),
-            onTimeout: () {
-              throw Exception('Request timeout');
-            },
-          );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final videos = _parseVideosFromBackend(data['videos'] as List<dynamic>);
-
-        print('Fetched ${videos.length} related videos');
-
-        return {'videos': videos, 'nextPageToken': data['nextPageToken']};
-      } else {
-        print('Related API Error: ${response.statusCode}');
-        return {'videos': <Video>[], 'nextPageToken': null};
-      }
-    } catch (e) {
-      print('Error fetching related videos: $e');
       return {'videos': <Video>[], 'nextPageToken': null};
     }
   }

@@ -19,15 +19,12 @@ class VideoPlayerScreen extends StatefulWidget {
 class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   late YoutubePlayerController _controller;
   final YouTubeService _youtubeService = YouTubeService();
+  final ScrollController _scrollController = ScrollController();
 
-  // Channel Videos State
-  List<Video> _channelVideos = [];
-  bool _isLoadingChannel = false;
-
-  // Similar Videos State
-  List<Video> _similarVideos = [];
-  bool _isLoadingSimilar = false;
-
+  List<Video> _relatedVideos = [];
+  String? _nextPageToken;
+  bool _isLoadingRelated = false;
+  bool _hasMoreRelated = true;
   bool _isPlayerReady = false;
 
   @override
@@ -59,122 +56,78 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           }
         });
 
-    _loadChannelVideos();
-    _loadSimilarVideos();
+    // Load related videos from same channel
+    _loadRelatedVideos();
+
+    // Setup infinite scroll
+    _scrollController.addListener(_onScroll);
   }
 
-  Future<void> _loadChannelVideos() async {
-    setState(() {
-      _isLoadingChannel = true;
-    });
-
-    try {
-      // Fetch 50 videos initially, should be enough for horizontal scroll
-      final result = await _youtubeService.getChannelVideos(
-        widget.video.channelTitle,
-      );
-
-      if (mounted) {
-        setState(() {
-          _channelVideos = result['videos'] as List<Video>;
-          _isLoadingChannel = false;
-        });
-      }
-    } catch (e) {
-      print('Error loading channel videos: $e');
-      if (mounted) {
-        setState(() {
-          _isLoadingChannel = false;
-        });
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 400) {
+      if (!_isLoadingRelated && _hasMoreRelated) {
+        _loadMoreRelatedVideos();
       }
     }
   }
 
-  Future<void> _loadSimilarVideos() async {
+  Future<void> _loadRelatedVideos() async {
     setState(() {
-      _isLoadingSimilar = true;
+      _isLoadingRelated = true;
     });
 
     try {
-      final result = await _youtubeService.getRelatedVideos(
-        widget.video.title,
-        excludeChannel: widget.video.channelTitle,
+      final result = await _youtubeService.getChannelVideos(
+        widget.video.channelTitle,
       );
 
-      if (mounted) {
-        setState(() {
-          _similarVideos = result['videos'] as List<Video>;
-          _isLoadingSimilar = false;
-        });
-      }
+      setState(() {
+        _relatedVideos = result['videos'] as List<Video>;
+        _nextPageToken = result['nextPageToken'] as String?;
+        _hasMoreRelated = _nextPageToken != null;
+        _isLoadingRelated = false;
+      });
     } catch (e) {
-      print('Error loading similar videos: $e');
-      if (mounted) {
-        setState(() {
-          _isLoadingSimilar = false;
-        });
-      }
+      print('Error loading related videos: $e');
+      setState(() {
+        _isLoadingRelated = false;
+      });
+    }
+  }
+
+  Future<void> _loadMoreRelatedVideos() async {
+    if (_nextPageToken == null) return;
+
+    setState(() {
+      _isLoadingRelated = true;
+    });
+
+    try {
+      final result = await _youtubeService.getChannelVideos(
+        widget.video.channelTitle,
+        pageToken: _nextPageToken,
+      );
+
+      setState(() {
+        _relatedVideos.addAll(result['videos'] as List<Video>);
+        _nextPageToken = result['nextPageToken'] as String?;
+        _hasMoreRelated = _nextPageToken != null;
+        _isLoadingRelated = false;
+      });
+    } catch (e) {
+      print('Error loading more related videos: $e');
+      setState(() {
+        _isLoadingRelated = false;
+      });
     }
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _scrollController.dispose();
     super.dispose();
-  }
-
-  Widget _buildHorizontalVideoList(
-    BuildContext context,
-    String title,
-    List<Video> videos,
-    bool isLoading,
-  ) {
-    if (videos.isEmpty && !isLoading) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-          ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 240, // Fixed height for video card + details
-          child: isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: videos.length,
-                  itemBuilder: (context, index) {
-                    final video = videos[index];
-                    return Container(
-                      width: 200, // Fixed width for horizontal cards
-                      margin: const EdgeInsets.only(right: 12),
-                      child: VideoCard(
-                        video: video,
-                        onTap: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  VideoPlayerScreen(video: video),
-                            ),
-                          );
-                        },
-                      ),
-                    );
-                  },
-                ),
-        ),
-      ],
-    );
   }
 
   @override
@@ -197,6 +150,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           appBar: AppBar(
             title: const Text('Watch Video'),
             actions: [
+              // Watch on YouTube button (backup)
               IconButton(
                 icon: const Icon(Icons.open_in_new),
                 tooltip: 'Watch on YouTube',
@@ -219,10 +173,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             ],
           ),
           body: SingleChildScrollView(
+            controller: _scrollController,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Player
+                // YouTube Player with loading state
                 _isPlayerReady
                     ? player
                     : AspectRatio(
@@ -237,7 +192,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                         ),
                       ),
 
-                // Video Details
+                // Video info
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -250,7 +205,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          Icon(Icons.person, size: 16, color: Colors.grey),
+                          Icon(
+                            Icons.person,
+                            size: 16,
+                            color: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.color,
+                          ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
@@ -263,7 +224,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                             Icon(
                               Icons.access_time,
                               size: 16,
-                              color: Colors.grey,
+                              color: Theme.of(
+                                context,
+                              ).textTheme.bodyMedium?.color,
                             ),
                             const SizedBox(width: 4),
                             Text(
@@ -291,27 +254,87 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                   ),
                 ),
 
+                // Related Videos Section
                 const Divider(thickness: 8),
-                const SizedBox(height: 16),
-
-                // Section 1: More from Channel
-                _buildHorizontalVideoList(
-                  context,
-                  'More from ${widget.video.channelTitle}',
-                  _channelVideos,
-                  _isLoadingChannel,
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.video_library,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'More from ${widget.video.channelTitle}',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ],
+                  ),
                 ),
 
-                const SizedBox(height: 24),
+                // Related Videos Grid
+                if (_relatedVideos.isEmpty && _isLoadingRelated)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(32),
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
+                else if (_relatedVideos.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Center(
+                      child: Text(
+                        'No more videos from this channel',
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                    ),
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 0.75,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
+                          ),
+                      itemCount:
+                          _relatedVideos.length + (_hasMoreRelated ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == _relatedVideos.length) {
+                          // Loading indicator at the end
+                          return const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(16),
+                              child: CircularProgressIndicator(),
+                            ),
+                          );
+                        }
 
-                // Section 2: Similar Videos
-                _buildHorizontalVideoList(
-                  context,
-                  'Similar Videos',
-                  _similarVideos,
-                  _isLoadingSimilar,
-                ),
+                        final video = _relatedVideos[index];
+                        return VideoCard(
+                          video: video,
+                          onTap: () {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    VideoPlayerScreen(video: video),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
 
+                // Bottom padding
                 const SizedBox(height: 32),
               ],
             ),
