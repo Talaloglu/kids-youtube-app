@@ -208,16 +208,21 @@ app.get('/api/channel/:channelName', async (req, res) => {
             }
         }
 
-        // Filter videos from the same channel
+        // Filter videos from the same channel with stricter matching
         const channelVideos = (searchResults.items || [])
             .filter(item => {
                 if (item.type !== 'video') return false;
 
-                const itemChannel = (item.channelTitle || '').toLowerCase();
-                const targetChannel = channelName.toLowerCase();
+                const itemChannel = (item.channelTitle || '').toLowerCase().trim();
+                const targetChannel = channelName.toLowerCase().trim();
 
-                // Check if channel name matches
-                return itemChannel.includes(targetChannel) || targetChannel.includes(itemChannel);
+                // Exact match or very close match (accounting for special characters)
+                const normalizedItem = itemChannel.replace(/[^\w\s]/g, '');
+                const normalizedTarget = targetChannel.replace(/[^\w\s]/g, '');
+
+                return normalizedItem === normalizedTarget ||
+                    itemChannel === targetChannel ||
+                    (normalizedItem.includes(normalizedTarget) && normalizedTarget.length > 5);
             })
             .map(video => {
                 const durationSeconds = parseDuration(

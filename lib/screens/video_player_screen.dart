@@ -26,6 +26,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   bool _isLoadingRelated = false;
   bool _hasMoreRelated = true;
   bool _isPlayerReady = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -75,23 +76,41 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   Future<void> _loadRelatedVideos() async {
     setState(() {
       _isLoadingRelated = true;
+      _errorMessage = null;
     });
 
     try {
-      final result = await _youtubeService.getChannelVideos(
-        widget.video.channelTitle,
-      );
+      final result = await _youtubeService
+          .getChannelVideos(widget.video.channelTitle)
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw Exception(
+                'Request timed out. Please check your connection.',
+              );
+            },
+          );
+
+      final videos = result['videos'] as List<Video>;
 
       setState(() {
-        _relatedVideos = result['videos'] as List<Video>;
+        _relatedVideos = videos;
         _nextPageToken = result['nextPageToken'] as String?;
-        _hasMoreRelated = _nextPageToken != null;
+        _hasMoreRelated = _nextPageToken != null && videos.isNotEmpty;
         _isLoadingRelated = false;
+
+        // Show message if no videos found
+        if (videos.isEmpty) {
+          _errorMessage = 'No videos found from this channel';
+        }
       });
     } catch (e) {
       print('Error loading related videos: $e');
       setState(() {
         _isLoadingRelated = false;
+        _errorMessage = e.toString().contains('timeout')
+            ? 'Connection timeout. Please try again.'
+            : 'Failed to load videos. Please try again.';
       });
     }
   }
@@ -104,21 +123,31 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     });
 
     try {
-      final result = await _youtubeService.getChannelVideos(
-        widget.video.channelTitle,
-        pageToken: _nextPageToken,
-      );
+      final result = await _youtubeService
+          .getChannelVideos(
+            widget.video.channelTitle,
+            pageToken: _nextPageToken,
+          )
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw Exception('Request timed out');
+            },
+          );
+
+      final videos = result['videos'] as List<Video>;
 
       setState(() {
-        _relatedVideos.addAll(result['videos'] as List<Video>);
+        _relatedVideos.addAll(videos);
         _nextPageToken = result['nextPageToken'] as String?;
-        _hasMoreRelated = _nextPageToken != null;
+        _hasMoreRelated = _nextPageToken != null && videos.isNotEmpty;
         _isLoadingRelated = false;
       });
     } catch (e) {
       print('Error loading more related videos: $e');
       setState(() {
         _isLoadingRelated = false;
+        _hasMoreRelated = false; // Stop trying to load more on error
       });
     }
   }
@@ -279,6 +308,33 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                     child: Padding(
                       padding: EdgeInsets.all(32),
                       child: CircularProgressIndicator(),
+                    ),
+                  )
+                else if (_errorMessage != null)
+                  Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            size: 48,
+                            color: Colors.orange,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            _errorMessage!,
+                            style: Theme.of(context).textTheme.bodyLarge,
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: _loadRelatedVideos,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Retry'),
+                          ),
+                        ],
+                      ),
                     ),
                   )
                 else if (_relatedVideos.isEmpty)
