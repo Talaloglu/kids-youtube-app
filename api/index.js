@@ -68,7 +68,8 @@ app.get('/api/search', async (req, res) => {
             // YouTube's algorithm gives more weight to earlier keywords
             const searchQuery = 'رسوم متحركة للأطفال كرتون ' + q + ' cartoon kids';
             console.log(`[Kids API] Enhanced search query: ${searchQuery}`);
-            searchResults = await youtubeSearch.GetListByKeyword(searchQuery, false, 25);
+            // Fetch 75 videos initially to have more candidates after filtering
+            searchResults = await youtubeSearch.GetListByKeyword(searchQuery, false, 75);
             console.timeEnd('YouTube Search');
 
             // Cache the continuation token for next page
@@ -122,8 +123,8 @@ app.get('/api/search', async (req, res) => {
                 const description = (video.description || '').toLowerCase();
                 const channel = (video.channelTitle || '').toLowerCase();
 
-                // Must be between 2-20 minutes (120-1200 seconds) - ideal for kids
-                if (durationSeconds < 120 || durationSeconds > 1200) return null;
+                // Must be between 1-30 minutes (60-1800 seconds) - good for cartoons and kids content
+                if (durationSeconds < 60 || durationSeconds > 1800) return null;
 
                 // Must contain at least one kid-friendly keyword
                 const combinedText = `${title} ${description} ${channel}`;

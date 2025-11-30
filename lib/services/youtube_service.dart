@@ -62,7 +62,7 @@ class YouTubeService {
       'music': 'أغاني أطفال songs nursery rhymes cartoon',
       'animals': 'حيوانات للأطفال animals cartoon',
       'games': 'ألعاب أطفال games puzzles cartoon',
-      'cartoons': 'رسوم متحركة للأطفال كرتون cartoons',
+      'cartoons': 'رسوم متحركة كرتون أطفال بالعربي peppa pig paw patrol',
       'sports': 'رياضة أطفال sports exercise cartoon',
     };
 
