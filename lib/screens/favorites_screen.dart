@@ -18,11 +18,7 @@ class FavoritesScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.favorite_border,
-                  size: 80,
-                  color: Colors.grey[400],
-                ),
+                Icon(Icons.favorite_border, size: 80, color: Colors.grey[400]),
                 const SizedBox(height: 16),
                 Text(
                   'No Favorites Yet!',
@@ -85,31 +81,28 @@ class FavoritesScreen extends StatelessWidget {
               ),
             ),
             SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 0),
               sliver: SliverGrid(
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  childAspectRatio: 0.75,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
+                  childAspectRatio: 0.82,
+                  crossAxisSpacing: 4,
+                  mainAxisSpacing: 4,
                 ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final video = bookmarks[index];
-                    return VideoCard(
-                      video: video,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => VideoPlayerScreen(video: video),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                  childCount: bookmarks.length,
-                ),
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final video = bookmarks[index];
+                  return VideoCard(
+                    video: video,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => VideoPlayerScreen(video: video),
+                        ),
+                      );
+                    },
+                  );
+                }, childCount: bookmarks.length),
               ),
             ),
             const SliverToBoxAdapter(child: SizedBox(height: 80)),

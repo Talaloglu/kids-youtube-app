@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
+import '../providers/history_provider.dart';
 import '../services/storage_service.dart';
+import '../widgets/parental_gate.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -13,10 +15,7 @@ class SettingsScreen extends StatelessWidget {
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            Text(
-              'Settings',
-              style: Theme.of(context).textTheme.displaySmall,
-            ),
+            Text('Settings', style: Theme.of(context).textTheme.displaySmall),
             const SizedBox(height: 24),
 
             // Theme section
@@ -25,7 +24,9 @@ class SettingsScreen extends StatelessWidget {
                 children: [
                   ListTile(
                     leading: Icon(
-                      themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                      themeProvider.isDarkMode
+                          ? Icons.dark_mode
+                          : Icons.light_mode,
                     ),
                     title: const Text('Dark Mode'),
                     subtitle: Text(
@@ -52,36 +53,48 @@ class SettingsScreen extends StatelessWidget {
                     leading: const Icon(Icons.delete_outline),
                     title: const Text('Clear Cache'),
                     subtitle: const Text('Remove all cached data'),
-                    onTap: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Clear Cache?'),
-                          content: const Text(
-                            'This will clear all cached data including favorites and watch history.',
+                    onTap: () async {
+                      final allowed = await ParentalGate.show(context);
+                      if (!allowed) return;
+
+                      if (context.mounted) {
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Clear Cache?'),
+                            content: const Text(
+                              'This will clear all cached data including favorites and watch history.',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () async {
+                                  await StorageService().clearAllData();
+                                  // Also clear history provider state
+                                  if (context.mounted) {
+                                    Provider.of<HistoryProvider>(
+                                      context,
+                                      listen: false,
+                                    ).clearHistory();
+                                    Navigator.pop(context);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Cache cleared successfully',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                                child: const Text('Clear'),
+                              ),
+                            ],
                           ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Cancel'),
-                            ),
-                            TextButton(
-                              onPressed: () async {
-                                await StorageService().clearAllData();
-                                if (context.mounted) {
-                                  Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Cache cleared successfully'),
-                                    ),
-                                  );
-                                }
-                              },
-                              child: const Text('Clear'),
-                            ),
-                          ],
-                        ),
-                      );
+                        );
+                      }
                     },
                   ),
                 ],
