@@ -17,19 +17,6 @@ class ResponsiveGrid {
     }
   }
 
-  /// Calculate max cross axis extent based on screen width
-  static double getMaxCrossAxisExtent(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    final columnCount = getColumnCount(context);
-
-    // Account for padding and spacing
-    const horizontalPadding = 32.0; // 16px on each side
-    const spacing = 16.0;
-    const totalSpacing = (columnCount - 1) * spacing;
-
-    return (width - horizontalPadding - totalSpacing) / columnCount;
-  }
-
   /// Get grid delegate for responsive grid
   static SliverGridDelegate getGridDelegate(BuildContext context) {
     return SliverGridDelegateWithFixedCrossAxisCount(
