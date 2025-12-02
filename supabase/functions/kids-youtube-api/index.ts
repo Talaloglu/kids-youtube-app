@@ -142,31 +142,9 @@ async function searchVideos(query: string, page: number, continuationToken: stri
 
                 if (hasUnsafeContent) return null
 
-                // CHILD SAFETY: Require kid-friendly indicators
-                // Expanded list to catch more legitimate content
-                const kidFriendlyKeywords = [
-                    // English
-                    'kids', 'children', 'child', 'educational', 'learning', 'learn',
-                    'fun', 'cartoon', 'animation', 'animated', 'story', 'stories',
-                    'tales', 'nursery', 'rhyme', 'song', 'music', 'sing',
-                    'craft', 'art', 'draw', 'paint', 'color', 'animal', 'nature',
-                    'science', 'math', 'abc', 'alphabet', 'numbers', 'counting',
-                    'shapes', 'family', 'friendly', 'toddler', 'preschool',
-                    'kindergarten', 'baby', 'play', 'game', 'puzzle', 'toy',
-                    'teach', 'tutorial', 'lesson', 'school', 'student',
-                    // Arabic
-                    'أطفال', 'للأطفال', 'طفل', 'رسوم', 'متحركة', 'كرتون',
-                    'تعليمي', 'تعليم', 'قصص', 'قصة', 'أغاني', 'أغنية',
-                    'حكايات', 'تلوين', 'حيوانات', 'حيوان', 'لعب', 'لعبة',
-                    'مدرسة', 'درس', 'دروس'
-                ]
 
-                const hasKidFriendlyContent = kidFriendlyKeywords.some(keyword =>
-                    combinedText.includes(keyword.toLowerCase())
-                )
-
-                // Require kid-friendly content for safety
-                if (!hasKidFriendlyContent) return null
+                // Trust YouTube's search - the Flutter app sends category-specific queries
+                // Only block explicitly unsafe content, don't require specific keywords
 
                 return {
                     id: video.id,
