@@ -5,7 +5,6 @@ import '../providers/video_provider.dart';
 import '../providers/bookmark_provider.dart';
 import '../providers/history_provider.dart';
 import '../widgets/video_card.dart';
-import '../widgets/fade_in_widget.dart';
 import '../utils/responsive_grid.dart';
 
 import 'video_player_screen.dart';
