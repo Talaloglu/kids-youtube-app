@@ -94,8 +94,10 @@ async function searchVideos(query: string, page: number, continuationToken: stri
         let searchResults
 
         if (continuationToken) {
-            // Use continuation token for next page
-            searchResults = await fetchYouTubeSearchContinuation(continuationToken, 75)
+            // Decode base64 continuation token
+            const decodedToken = atob(continuationToken)
+            console.log(`[Kids API] Using decoded continuation token`)
+            searchResults = await fetchYouTubeSearchContinuation(decodedToken, 75)
         } else {
             // Fresh search for first page
             searchResults = await fetchYouTubeSearch(searchQuery, 75)
