@@ -18,9 +18,6 @@ interface VideoData {
     duration: string | null
 }
 
-// Cache for continuation tokens
-const searchCache = new Map<string, any>()
-
 serve(async (req) => {
     // Handle CORS preflight
     if (req.method === 'OPTIONS') {
@@ -93,31 +90,9 @@ async function searchVideos(query: string, page: number): Promise<{ videos: Vide
         const searchQuery = 'رسوم متحركة للأطفال كرتون ' + query + ' cartoon kids'
         console.log(`[Kids API] Enhanced search query: ${searchQuery}`)
 
-        let searchResults
-        const cacheKey = `${query}_continuation`
-
-        if (page === 1) {
-            // Fresh search for page 1
-            searchResults = await fetchYouTubeSearch(searchQuery, 75)
-
-            // Cache continuation token
-            if (searchResults.continuation) {
-                searchCache.set(cacheKey, searchResults.continuation)
-            }
-        } else {
-            // Use continuation token for subsequent pages
-            const continuation = searchCache.get(cacheKey)
-            if (continuation) {
-                searchResults = await fetchYouTubeSearchContinuation(continuation, 50)
-
-                // Update cache
-                if (searchResults.continuation) {
-                    searchCache.set(cacheKey, searchResults.continuation)
-                }
-            } else {
-                return { videos: [] }
-            }
-        }
+        // Always do a fresh search (serverless functions don't maintain state)
+        // Fetch more results to account for filtering
+        const searchResults = await fetchYouTubeSearch(searchQuery, 75)
 
         // Kid-friendly keywords
         const kidsKeywords = [
@@ -169,7 +144,8 @@ async function searchVideos(query: string, page: number): Promise<{ videos: Vide
 
         return {
             videos,
-            nextPageToken: searchResults.continuation ? (page + 1).toString() : undefined
+            // Always allow pagination since we do fresh searches
+            nextPageToken: videos.length > 0 ? (page + 1).toString() : undefined
         }
     } catch (error) {
         console.error('[Kids API] Search error:', error)
@@ -182,27 +158,9 @@ async function getChannelVideos(channelName: string, page: number): Promise<{ vi
         console.log(`[Kids API] Fetching channel videos: ${channelName}, page: ${page}`)
 
         const searchQuery = `${channelName} "cartoon" "kids"`
-        let searchResults
-        const cacheKey = `${channelName}_channel_continuation`
 
-        if (page === 1) {
-            searchResults = await fetchYouTubeSearch(searchQuery, 50)
-
-            if (searchResults.continuation) {
-                searchCache.set(cacheKey, searchResults.continuation)
-            }
-        } else {
-            const continuation = searchCache.get(cacheKey)
-            if (continuation) {
-                searchResults = await fetchYouTubeSearchContinuation(continuation, 50)
-
-                if (searchResults.continuation) {
-                    searchCache.set(cacheKey, searchResults.continuation)
-                }
-            } else {
-                return { videos: [] }
-            }
-        }
+        // Always do fresh search
+        const searchResults = await fetchYouTubeSearch(searchQuery, 50)
 
         // Filter videos from the same channel
         const videos = searchResults.items
@@ -243,7 +201,7 @@ async function getChannelVideos(channelName: string, page: number): Promise<{ vi
 
         return {
             videos,
-            nextPageToken: searchResults.continuation ? (page + 1).toString() : undefined
+            nextPageToken: videos.length > 0 ? (page + 1).toString() : undefined
         }
     } catch (error) {
         console.error('[Kids API] Channel videos error:', error)
