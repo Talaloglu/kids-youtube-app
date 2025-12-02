@@ -32,6 +32,7 @@ serve(async (req) => {
         if (path === '/api/search') {
             const query = url.searchParams.get('q') || ''
             const page = url.searchParams.get('page') || '1'
+            const continuationToken = url.searchParams.get('continuation') || null
 
             if (!query) {
                 return new Response(
@@ -40,7 +41,7 @@ serve(async (req) => {
                 )
             }
 
-            const result = await searchVideos(query, parseInt(page))
+            const result = await searchVideos(query, parseInt(page), continuationToken)
 
             return new Response(
                 JSON.stringify(result),
@@ -82,17 +83,23 @@ serve(async (req) => {
     }
 })
 
-async function searchVideos(query: string, page: number): Promise<{ videos: VideoData[], nextPageToken?: string }> {
+async function searchVideos(query: string, page: number, continuationToken: string | null): Promise<{ videos: VideoData[], nextPageToken?: string }> {
     try {
-        console.log(`[Kids API] Searching for: ${query}, page: ${page}`)
+        console.log(`[Kids API] Searching for: ${query}, page: ${page}, continuation: ${continuationToken ? 'yes' : 'no'}`)
 
         // Prioritize Arabic cartoon content
         const searchQuery = 'رسوم متحركة للأطفال كرتون ' + query + ' cartoon kids'
         console.log(`[Kids API] Enhanced search query: ${searchQuery}`)
 
-        // Always do a fresh search (serverless functions don't maintain state)
-        // Fetch more results to account for filtering
-        const searchResults = await fetchYouTubeSearch(searchQuery, 75)
+        let searchResults
+
+        if (continuationToken) {
+            // Use continuation token for next page
+            searchResults = await fetchYouTubeSearchContinuation(continuationToken, 75)
+        } else {
+            // Fresh search for first page
+            searchResults = await fetchYouTubeSearch(searchQuery, 75)
+        }
 
         // Kid-friendly keywords
         const kidsKeywords = [
@@ -142,10 +149,14 @@ async function searchVideos(query: string, page: number): Promise<{ videos: Vide
 
         console.log(`[Kids API] Filtered ${videos.length} kid-friendly videos`)
 
+        // Return continuation token as nextPageToken (base64 encoded to pass in URL)
+        const nextToken = searchResults.continuation
+            ? btoa(searchResults.continuation)
+            : undefined
+
         return {
             videos,
-            // Always allow pagination since we do fresh searches
-            nextPageToken: videos.length > 0 ? (page + 1).toString() : undefined
+            nextPageToken: nextToken
         }
     } catch (error) {
         console.error('[Kids API] Search error:', error)

@@ -16,10 +16,18 @@ class YouTubeService {
     int maxResults = 50,
   }) async {
     try {
-      final page = pageToken ?? '1';
+      // Build query parameters
+      final Map<String, String> params = {'q': query};
+
+      // If we have a pageToken, it's actually a continuation token (base64 encoded)
+      if (pageToken != null && pageToken != '1') {
+        params['continuation'] = pageToken;
+      }
+      params['page'] = pageToken ?? '1';
+
       final url = Uri.parse(
         '$_backendUrl/api/search',
-      ).replace(queryParameters: {'q': query, 'page': page});
+      ).replace(queryParameters: params);
 
       print('Fetching from backend: $url');
 
