@@ -129,16 +129,44 @@ async function searchVideos(query: string, page: number, continuationToken: stri
                 const channel = (video.channelTitle || '').toLowerCase()
                 const combinedText = `${title} ${description} ${channel}`
 
-                // Only filter out explicit adult content
-                const hasAdultContent = combinedText.includes('18+') ||
-                    combinedText.includes('adult only') ||
-                    combinedText.includes('nsfw') ||
-                    combinedText.includes('explicit')
+                // CHILD SAFETY: Filter out inappropriate content
+                const unsafeKeywords = [
+                    '18+', 'adult only', 'nsfw', 'explicit', 'mature',
+                    'horror', 'scary', 'violent', 'gore', 'blood',
+                    'weapon', 'gun', 'knife', 'fight', 'war'
+                ]
 
-                if (hasAdultContent) return null
+                const hasUnsafeContent = unsafeKeywords.some(keyword =>
+                    combinedText.includes(keyword)
+                )
 
-                // Trust YouTube's search - the Flutter app sends category-specific queries
-                // No need for additional keyword filtering
+                if (hasUnsafeContent) return null
+
+                // CHILD SAFETY: Require kid-friendly indicators
+                // Expanded list to catch more legitimate content
+                const kidFriendlyKeywords = [
+                    // English
+                    'kids', 'children', 'child', 'educational', 'learning', 'learn',
+                    'fun', 'cartoon', 'animation', 'animated', 'story', 'stories',
+                    'tales', 'nursery', 'rhyme', 'song', 'music', 'sing',
+                    'craft', 'art', 'draw', 'paint', 'color', 'animal', 'nature',
+                    'science', 'math', 'abc', 'alphabet', 'numbers', 'counting',
+                    'shapes', 'family', 'friendly', 'toddler', 'preschool',
+                    'kindergarten', 'baby', 'play', 'game', 'puzzle', 'toy',
+                    'teach', 'tutorial', 'lesson', 'school', 'student',
+                    // Arabic
+                    'أطفال', 'للأطفال', 'طفل', 'رسوم', 'متحركة', 'كرتون',
+                    'تعليمي', 'تعليم', 'قصص', 'قصة', 'أغاني', 'أغنية',
+                    'حكايات', 'تلوين', 'حيوانات', 'حيوان', 'لعب', 'لعبة',
+                    'مدرسة', 'درس', 'دروس'
+                ]
+
+                const hasKidFriendlyContent = kidFriendlyKeywords.some(keyword =>
+                    combinedText.includes(keyword.toLowerCase())
+                )
+
+                // Require kid-friendly content for safety
+                if (!hasKidFriendlyContent) return null
 
                 return {
                     id: video.id,
