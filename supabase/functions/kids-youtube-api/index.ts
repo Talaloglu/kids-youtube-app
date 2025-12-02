@@ -120,32 +120,28 @@ async function searchVideos(query: string, page: number, continuationToken: stri
             .map((video: any) => {
                 const durationSeconds = parseDuration(video.duration || '')
 
-                // Relax duration filter: 30 seconds to 45 minutes (was 1-30 min)
-                if (durationSeconds < 30 || durationSeconds > 2700) return null
+                // Relax duration filter: 2 minutes to 45 minutes (requested by user)
+                if (durationSeconds < 120 || durationSeconds > 2700) return null
 
                 const title = (video.title || '').toLowerCase()
                 const description = (video.description || '').toLowerCase()
                 const channel = (video.channelTitle || '').toLowerCase()
                 const combinedText = `${title} ${description} ${channel}`
 
-                // More lenient keyword matching - check if it's NOT adult content
+                // Check for adult content (safety net)
                 const hasAdultContent = combinedText.includes('18+') ||
                     combinedText.includes('adult only') ||
                     combinedText.includes('nsfw')
 
                 if (hasAdultContent) return null
 
-                // For Arabic queries, prioritize Arabic content but don't require it
-                // For other queries, just avoid adult content
+                // Strict keyword matching to ensure relevance
                 const hasRelevantKeyword = kidsKeywords.some(keyword =>
                     combinedText.includes(keyword.toLowerCase())
                 )
 
-                // If no kid keywords found, at least check it's not obviously inappropriate
-                if (!hasRelevantKeyword && combinedText.length > 0) {
-                    // Allow it if it doesn't have adult markers
-                    console.log(`[Kids API] Allowing video without kid keywords: ${video.title}`)
-                }
+                // Require at least one kid-friendly keyword to ensure relevance
+                if (!hasRelevantKeyword) return null
 
                 return {
                     id: video.id,
