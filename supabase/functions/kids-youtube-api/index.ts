@@ -105,12 +105,41 @@ async function searchVideos(query: string, page: number, continuationToken: stri
         }
 
 
-        // No filtering - trust YouTube's search with Restricted Mode
-        // The Flutter app sends child-specific queries + we use Restricted Mode API
+        // Smart filtering: Block inappropriate content types while maintaining consistency
+        // We fetch 150 videos, filter out bad content, should still get 100+ videos
         const videos = searchResults.items
             .filter((item: any) => item.type === 'video')
             .map((video: any) => {
                 const durationSeconds = parseDuration(video.duration || '')
+                const title = (video.title || '').toLowerCase()
+                const description = (video.description || '').toLowerCase()
+                const channel = (video.channelTitle || '').toLowerCase()
+                const combinedText = `${title} ${description} ${channel}`
+
+                // Block movies, TV shows, and adult content
+                const inappropriateKeywords = [
+                    // Movies & TV Shows
+                    'full movie', 'full film', 'película completa', 'فيلم كامل',
+                    'tv show', 'tv series', 'episode', 'season',
+                    'netflix', 'disney+', 'hbo', 'prime video',
+                    // Adult content
+                    '18+', 'adult only', 'nsfw', 'explicit', 'mature',
+                    'horror', 'scary', 'violent', 'gore', 'blood',
+                    // Inappropriate music
+                    'rap battle', 'diss track', 'explicit lyrics',
+                    // Long-form documentaries (not kid-friendly)
+                    'documentary', 'full documentary', 'وثائقي كامل'
+                ]
+
+                const hasInappropriate = inappropriateKeywords.some(keyword =>
+                    combinedText.includes(keyword)
+                )
+
+                if (hasInappropriate) return null
+
+                // Also filter by duration: skip very long videos (likely movies/docs)
+                // and very short videos (likely ads/clips)
+                if (durationSeconds < 60 || durationSeconds > 3600) return null
 
                 return {
                     id: video.id,
@@ -124,6 +153,7 @@ async function searchVideos(query: string, page: number, continuationToken: stri
                     duration: formatDuration(durationSeconds)
                 }
             })
+            .filter((v: any) => v !== null)
 
         console.log(`[Kids API] Filtered ${videos.length} kid-friendly videos`)
 
