@@ -104,47 +104,13 @@ async function searchVideos(query: string, page: number, continuationToken: stri
             searchResults = await fetchYouTubeSearch(searchQuery, 150)
         }
 
-        // Kid-friendly keywords - make it more lenient
-        const kidsKeywords = [
-            'kids', 'children', 'educational', 'learning', 'fun', 'cartoon',
-            'animation', 'story', 'tales', 'nursery', 'rhyme', 'song',
-            'craft', 'art', 'draw', 'animal', 'nature', 'science',
-            'math', 'abc', 'numbers', 'colors', 'shapes', 'family',
-            'friendly', 'toddler', 'preschool', 'kindergarten',
-            'أطفال', 'للأطفال', 'رسوم', 'متحركة', 'كرتون', 'تعليمي',
-            'قصص', 'أغاني', 'حكايات', 'تلوين', 'حيوانات', 'baby', 'play'
-        ]
 
-        // Filter and format videos - be more lenient with filtering
+        // No filtering - trust YouTube's search with Restricted Mode
+        // The Flutter app sends child-specific queries + we use Restricted Mode API
         const videos = searchResults.items
             .filter((item: any) => item.type === 'video')
             .map((video: any) => {
                 const durationSeconds = parseDuration(video.duration || '')
-
-                // Duration filter: 2 minutes to 45 minutes
-                if (durationSeconds < 120 || durationSeconds > 2700) return null
-
-                const title = (video.title || '').toLowerCase()
-                const description = (video.description || '').toLowerCase()
-                const channel = (video.channelTitle || '').toLowerCase()
-                const combinedText = `${title} ${description} ${channel}`
-
-                // CHILD SAFETY: Filter out inappropriate content
-                const unsafeKeywords = [
-                    '18+', 'adult only', 'nsfw', 'explicit', 'mature',
-                    'horror', 'scary', 'violent', 'gore', 'blood',
-                    'weapon', 'gun', 'knife', 'fight', 'war'
-                ]
-
-                const hasUnsafeContent = unsafeKeywords.some(keyword =>
-                    combinedText.includes(keyword)
-                )
-
-                if (hasUnsafeContent) return null
-
-
-                // Trust YouTube's search - the Flutter app sends category-specific queries
-                // Only block explicitly unsafe content, don't require specific keywords
 
                 return {
                     id: video.id,
@@ -158,7 +124,6 @@ async function searchVideos(query: string, page: number, continuationToken: stri
                     duration: formatDuration(durationSeconds)
                 }
             })
-            .filter((v: any) => v !== null)
 
         console.log(`[Kids API] Filtered ${videos.length} kid-friendly videos`)
 

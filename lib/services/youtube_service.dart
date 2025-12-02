@@ -63,16 +63,18 @@ class YouTubeService {
     String category, {
     String? pageToken,
   }) async {
-    // Map category IDs to kid-friendly search terms with Arabic cartoon priority
+    // Map category IDs to kid-friendly search terms with explicit child-safety keywords
+    // Adding "kids" ensures YouTube's algorithm returns child-appropriate content
     final categoryQueries = {
-      'educational': 'تعليمي للأطفال educational cartoon',
-      'stories': 'قصص أطفال حكايات stories cartoon',
-      'arts': 'رسم تلوين للأطفال arts crafts cartoon',
-      'music': 'أغاني أطفال songs nursery rhymes cartoon',
-      'animals': 'حيوانات للأطفال animals cartoon',
-      'games': 'ألعاب أطفال games puzzles cartoon',
-      'cartoons': 'رسوم متحركة كرتون أطفال بالعربي peppa pig paw patrol',
-      'sports': 'رياضة أطفال sports exercise cartoon',
+      'educational':
+          'kids تعليمي للأطفال educational learning children cartoon',
+      'stories': 'kids قصص أطفال حكايات stories children cartoon',
+      'arts': 'kids رسم تلوين للأطفال arts crafts children cartoon',
+      'music': 'kids أغاني أطفال songs nursery rhymes children cartoon',
+      'animals': 'kids حيوانات للأطفال animals children cartoon',
+      'games': 'kids ألعاب أطفال games puzzles children cartoon',
+      'cartoons': 'kids رسوم متحركة كرتون أطفال children بالعربي cartoon',
+      'sports': 'kids رياضة أطفال sports exercise children cartoon',
     };
 
     final query = categoryQueries[category] ?? 'kids educational';
