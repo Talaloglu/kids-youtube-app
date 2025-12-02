@@ -87,9 +87,10 @@ async function searchVideos(query: string, page: number, continuationToken: stri
     try {
         console.log(`[Kids API] Searching for: ${query}, page: ${page}, continuation: ${continuationToken ? 'yes' : 'no'}`)
 
-        // Prioritize Arabic cartoon content
-        const searchQuery = 'رسوم متحركة للأطفال كرتون ' + query + ' cartoon kids'
-        console.log(`[Kids API] Enhanced search query: ${searchQuery}`)
+
+        // Use the query as-is - the Flutter app already provides category-specific queries
+        const searchQuery = query
+        console.log(`[Kids API] Search query: ${searchQuery}`)
 
         let searchResults
 
