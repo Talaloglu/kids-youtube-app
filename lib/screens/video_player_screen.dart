@@ -59,47 +59,25 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     _scrollController.addListener(_onScroll);
   }
 
-  /// Initialize player - try to get stream URL from backend first for instant playback
-  void _initializePlayer() async {
+  /// Initialize player with YouTube URL
+  void _initializePlayer() {
     try {
-      // Try to get direct stream URL from backend (instant playback!)
-      final streamUrl = await _youtubeService.getStreamUrl(_currentVideo.id);
+      _controller = PodPlayerController(
+        playVideoFrom: PlayVideoFrom.youtube(_currentVideo.videoUrl),
+        podPlayerConfig: const PodPlayerConfig(
+          autoPlay: true,
+          isLooping: false,
+          videoQualityPriority: [360, 480, 720],
+          wakelockEnabled: true,
+        ),
+      )..initialise();
 
-      if (streamUrl != null && mounted) {
-        // Use direct stream URL for INSTANT playback!
-        print('Using server-extracted stream URL for instant playback');
-        _controller = PodPlayerController(
-          playVideoFrom: PlayVideoFrom.network(streamUrl),
-          podPlayerConfig: const PodPlayerConfig(
-            autoPlay: true,
-            isLooping: false,
-            wakelockEnabled: true,
-          ),
-        )..initialise();
-      } else if (mounted) {
-        // Fallback to pod_player's YouTube extraction
-        print('Fallback to YouTube URL extraction');
-        _controller = PodPlayerController(
-          playVideoFrom: PlayVideoFrom.youtube(_currentVideo.videoUrl),
-          podPlayerConfig: const PodPlayerConfig(
-            autoPlay: true,
-            isLooping: false,
-            videoQualityPriority: [360, 480, 720],
-            wakelockEnabled: true,
-          ),
-        )..initialise();
-      }
-
-      if (mounted) {
-        // Add listener for state changes
-        _controller.addListener(_onPlayerStateChange);
-      }
+      // Add listener for state changes
+      _controller.addListener(_onPlayerStateChange);
     } catch (e) {
       print('Error initializing player: $e');
       // Fallback to YouTube app
-      if (mounted) {
-        Future.delayed(Duration.zero, () => _openInYouTubeApp());
-      }
+      Future.delayed(Duration.zero, () => _openInYouTubeApp());
     }
   }
 
@@ -137,7 +115,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     }
   }
 
-  void _playNextVideo() async {
+  void _playNextVideo() {
     if (_relatedVideos.isEmpty) return;
 
     final nextVideo = _relatedVideos.first;
@@ -151,25 +129,14 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       _hasAddedToHistory = false;
     });
 
-    // Try to get stream URL for instant playback
-    final streamUrl = await _youtubeService.getStreamUrl(nextVideo.id);
-
-    if (streamUrl != null && mounted) {
-      // Use direct stream URL for instant playback
-      _controller.changeVideo(
-        playVideoFrom: PlayVideoFrom.network(streamUrl),
-        playerConfig: const PodPlayerConfig(autoPlay: true),
-      );
-    } else if (mounted) {
-      // Fallback to YouTube extraction
-      _controller.changeVideo(
-        playVideoFrom: PlayVideoFrom.youtube(nextVideo.videoUrl),
-        playerConfig: const PodPlayerConfig(
-          autoPlay: true,
-          videoQualityPriority: [360, 480, 720],
-        ),
-      );
-    }
+    // Change video using YouTube URL
+    _controller.changeVideo(
+      playVideoFrom: PlayVideoFrom.youtube(nextVideo.videoUrl),
+      playerConfig: const PodPlayerConfig(
+        autoPlay: true,
+        videoQualityPriority: [360, 480, 720],
+      ),
+    );
 
     // Load new related videos
     _loadRelatedVideos();
