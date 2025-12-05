@@ -7,7 +7,6 @@ import '../models/video_model.dart';
 import '../providers/bookmark_provider.dart';
 import '../providers/history_provider.dart';
 import '../services/youtube_service.dart';
-import '../services/video_preload_service.dart';
 import '../widgets/compact_video_card.dart';
 import '../utils/custom_route.dart';
 
@@ -24,7 +23,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   late PodPlayerController _controller;
   final YouTubeService _youtubeService = YouTubeService();
   final ScrollController _scrollController = ScrollController();
-  final VideoPreloadService _preloadService = VideoPreloadService();
 
   late Video _currentVideo;
   List<Video> _relatedVideos = [];
@@ -61,37 +59,18 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     _scrollController.addListener(_onScroll);
   }
 
-  /// Initialize player with preloaded URL if available, otherwise use YouTube URL
+  /// Initialize player with YouTube URL
   void _initializePlayer() {
     try {
-      // Check if we have a preloaded stream URL for instant playback
-      final preloadedUrl = _preloadService.getCachedUrl(_currentVideo.id);
-
-      if (preloadedUrl != null) {
-        // Use preloaded URL for INSTANT playback!
-        print('Using preloaded URL for instant playback');
-        _controller = PodPlayerController(
-          playVideoFrom: PlayVideoFrom.network(preloadedUrl),
-          podPlayerConfig: const PodPlayerConfig(
-            autoPlay: true,
-            isLooping: false,
-            videoQualityPriority: [360, 480, 720],
-            wakelockEnabled: true,
-          ),
-        )..initialise();
-      } else {
-        // Fallback to YouTube URL extraction (slower)
-        print('No preloaded URL, using YouTube extraction');
-        _controller = PodPlayerController(
-          playVideoFrom: PlayVideoFrom.youtube(_currentVideo.videoUrl),
-          podPlayerConfig: const PodPlayerConfig(
-            autoPlay: true,
-            isLooping: false,
-            videoQualityPriority: [360, 480, 720],
-            wakelockEnabled: true,
-          ),
-        )..initialise();
-      }
+      _controller = PodPlayerController(
+        playVideoFrom: PlayVideoFrom.youtube(_currentVideo.videoUrl),
+        podPlayerConfig: const PodPlayerConfig(
+          autoPlay: true,
+          isLooping: false,
+          videoQualityPriority: [360, 480, 720],
+          wakelockEnabled: true,
+        ),
+      )..initialise();
 
       // Add listener for state changes
       _controller.addListener(_onPlayerStateChange);

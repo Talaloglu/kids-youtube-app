@@ -48,9 +48,6 @@ dependencies:
   # YouTube player with better performance (native players)
   pod_player: ^0.2.2
   
-  # Direct YouTube stream extraction for preloading
-  youtube_explode_dart: ^2.3.0
-  
   # Image caching
   cached_network_image: ^3.3.0
   
