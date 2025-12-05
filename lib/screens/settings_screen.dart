@@ -124,7 +124,7 @@ class SettingsScreen extends StatelessWidget {
                           title: const Text('Privacy & Safety'),
                           content: const Text(
                             'This app uses YouTube\'s strict safe search to ensure all content is appropriate for children. '
-                            'Videos are filtered to be between 1-60 minutes in length for optimal viewing.',
+                            'Videos are filtered to be between 2-20 minutes in length for optimal viewing.',
                           ),
                           actions: [
                             TextButton(

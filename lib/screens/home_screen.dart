@@ -78,16 +78,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildHomeContent() {
     return Consumer<VideoProvider>(
       builder: (context, videoProvider, child) {
-        // Show error state
-        if (videoProvider.error != null &&
-            videoProvider.videos.isEmpty &&
-            videoProvider.categoryVideos.isEmpty) {
-          return StateView.error(
-            message: videoProvider.error!,
-            onRetry: () => videoProvider.refresh(),
-          );
-        }
-
         // Show search results or specific category if active
         if (videoProvider.searchQuery.isNotEmpty ||
             videoProvider.selectedCategory != null) {
@@ -103,101 +93,24 @@ class _HomeScreenState extends State<HomeScreen> {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      TextField(
-                        controller: _searchController,
-                        decoration: InputDecoration(
-                          hintText: 'Search for videos...',
-                          prefixIcon: const Icon(Icons.search),
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _searchController.clear();
-                              videoProvider.loadInitialVideos();
-                            },
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          filled: true,
-                        ),
-                        onSubmitted: (_) => _onSearch(),
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Search for videos...',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          videoProvider.loadInitialVideos();
+                        },
                       ),
-
-                      // Recent Searches
-                      if (_searchController.text.isEmpty &&
-                          videoProvider.searchQuery.isEmpty &&
-                          videoProvider.searchHistory.isNotEmpty)
-                        Container(
-                          margin: const EdgeInsets.only(top: 8),
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).cardColor,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Recent Searches',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleSmall
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.grey[600],
-                                          ),
-                                    ),
-                                    TextButton(
-                                      onPressed: () =>
-                                          videoProvider.clearSearchHistory(),
-                                      style: TextButton.styleFrom(
-                                        padding: EdgeInsets.zero,
-                                        minimumSize: const Size(50, 30),
-                                        tapTargetSize:
-                                            MaterialTapTargetSize.shrinkWrap,
-                                      ),
-                                      child: const Text('Clear'),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Wrap(
-                                spacing: 8,
-                                children: videoProvider.searchHistory.map((
-                                  term,
-                                ) {
-                                  return ActionChip(
-                                    label: Text(term),
-                                    avatar: const Icon(Icons.history, size: 16),
-                                    onPressed: () {
-                                      _searchController.text = term;
-                                      _onSearch();
-                                    },
-                                  );
-                                }).toList(),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      filled: true,
+                    ),
+                    onSubmitted: (_) => _onSearch(),
                   ),
                 ),
               ),

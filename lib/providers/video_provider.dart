@@ -15,8 +15,6 @@ class VideoProvider with ChangeNotifier {
   String? _nextPageToken;
   cat.Category? _selectedCategory;
   String _searchQuery = '';
-  List<String> _searchHistory = [];
-  String? _error;
 
   List<Video> get videos => _videos;
   Map<String, List<Video>> get categoryVideos => _categoryVideos;
@@ -24,21 +22,15 @@ class VideoProvider with ChangeNotifier {
   bool get hasMore => _nextPageToken != null;
   cat.Category? get selectedCategory => _selectedCategory;
   String get searchQuery => _searchQuery;
-  List<String> get searchHistory => _searchHistory;
-  String? get error => _error;
 
   // Load initial videos (Home Screen content)
   Future<void> loadInitialVideos() async {
     _isLoading = true;
     _searchQuery = '';
     _selectedCategory = null;
-    _error = null;
     notifyListeners();
 
     try {
-      // Load search history
-      _searchHistory = await _storageService.loadSearchHistory();
-
       // 1. Load from cache first for instant UI
       await Future.wait(
         cat.kidsCategories.map((category) async {
@@ -73,13 +65,11 @@ class VideoProvider with ChangeNotifier {
             }
           } catch (e) {
             print('Error loading videos for category ${category.name}: $e');
-            // Don't set global error here to avoid blocking the whole UI if one category fails
           }
         }),
       );
     } catch (e) {
       print('Error loading initial videos: $e');
-      _error = 'Failed to load videos. Please check your internet connection.';
     }
 
     _isLoading = false;
@@ -93,7 +83,6 @@ class VideoProvider with ChangeNotifier {
     _isLoading = true;
     _videos = [];
     _nextPageToken = null;
-    _error = null;
     notifyListeners();
 
     try {
@@ -102,7 +91,6 @@ class VideoProvider with ChangeNotifier {
       _nextPageToken = result['nextPageToken'];
     } catch (e) {
       print('Error loading category videos: $e');
-      _error = 'Failed to load videos. Please try again.';
     }
 
     _isLoading = false;
@@ -111,41 +99,19 @@ class VideoProvider with ChangeNotifier {
 
   // Search videos
   Future<void> searchVideos(String query) async {
-    if (query.trim().isEmpty) return;
-
     _searchQuery = query;
     _selectedCategory = null;
     _isLoading = true;
     _videos = [];
     _nextPageToken = null;
-    _error = null;
     notifyListeners();
 
     try {
-      // Save to history
-      if (!_searchHistory.contains(query)) {
-        _searchHistory.insert(0, query);
-        if (_searchHistory.length > 10) {
-          _searchHistory.removeLast();
-        }
-        await _storageService.saveSearchHistory(_searchHistory);
-      } else {
-        // Move to top
-        _searchHistory.remove(query);
-        _searchHistory.insert(0, query);
-        await _storageService.saveSearchHistory(_searchHistory);
-      }
-
       final result = await _youtubeService.searchVideos(query);
       _videos = result['videos'] as List<Video>;
       _nextPageToken = result['nextPageToken'];
-
-      if (_videos.isEmpty) {
-        _error = 'No videos found for "$query"';
-      }
     } catch (e) {
       print('Error searching videos: $e');
-      _error = 'Failed to search videos. Please check your connection.';
     }
 
     _isLoading = false;
@@ -173,6 +139,7 @@ class VideoProvider with ChangeNotifier {
           pageToken: _nextPageToken,
         );
       } else {
+        // Should not happen in new layout, but fallback
         return;
       }
 
@@ -181,7 +148,6 @@ class VideoProvider with ChangeNotifier {
       _nextPageToken = result['nextPageToken'];
     } catch (e) {
       print('Error loading more videos: $e');
-      // Don't set main error for pagination failure, maybe show snackbar in UI
     }
 
     _isLoading = false;
@@ -191,27 +157,12 @@ class VideoProvider with ChangeNotifier {
   // Clear category filter
   void clearCategoryFilter() {
     _selectedCategory = null;
-    _error = null;
-    notifyListeners();
-  }
-
-  // Clear search history
-  Future<void> clearSearchHistory() async {
-    _searchHistory.clear();
-    await _storageService.saveSearchHistory([]);
-    notifyListeners();
-  }
-
-  // Remove single search item
-  Future<void> removeSearchItem(String query) async {
-    _searchHistory.remove(query);
-    await _storageService.saveSearchHistory(_searchHistory);
+    // Don't reload everything, just reset view state
     notifyListeners();
   }
 
   // Refresh videos
   Future<void> refresh() async {
-    _error = null;
     if (_selectedCategory != null) {
       await loadVideosByCategory(_selectedCategory!);
     } else if (_searchQuery.isNotEmpty) {

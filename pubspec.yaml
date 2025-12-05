@@ -45,8 +45,11 @@ dependencies:
   shared_preferences: ^2.2.2
   url_launcher: ^6.2.5
   
-  # YouTube player (with fallback to external app)
-  youtube_player_flutter: ^9.0.3
+  # YouTube player with better performance (native players)
+  pod_player: ^0.2.2
+  
+  # Direct YouTube stream extraction for preloading
+  youtube_explode_dart: ^2.3.0
   
   # Image caching
   cached_network_image: ^3.3.0

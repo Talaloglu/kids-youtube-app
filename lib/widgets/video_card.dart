@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import '../models/video_model.dart';
 import '../providers/bookmark_provider.dart';
+import '../services/video_preload_service.dart';
 
 class VideoCard extends StatefulWidget {
   final Video video;
@@ -16,6 +17,15 @@ class VideoCard extends StatefulWidget {
 
 class _VideoCardState extends State<VideoCard> {
   bool _isHovered = false;
+  final VideoPreloadService _preloadService = VideoPreloadService();
+
+  @override
+  void initState() {
+    super.initState();
+    // Preload this video's stream URL in the background
+    // When user taps, playback will start instantly!
+    _preloadService.preload(widget.video.id);
+  }
 
   @override
   Widget build(BuildContext context) {
